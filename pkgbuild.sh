@@ -6,6 +6,8 @@ CONFIGURATION="Release"
 ARCHIVE_PATH="./build/archive.xcarchive"
 EXPORT_PATH="./build/export"
 EXPORT_OPTIONS_PLIST="./exportOptions.plist"
+PKG_SCRIPTS_SOURCE_PATH="./pkg-scripts"
+PKG_SCRIPTS_PATH="./build/pkg-scripts"
 
 # 1. Clean Build
 rm -rf ./build
@@ -52,12 +54,18 @@ rm ${EXPORT_PATH}/Packaging.log
 rm ${EXPORT_PATH}/DistributionSummary.plist
 rm ${EXPORT_PATH}/ExportOptions.plist
 
+mkdir -p "${PKG_SCRIPTS_PATH}"
+cp "${PKG_SCRIPTS_SOURCE_PATH}/postinstall" "${PKG_SCRIPTS_PATH}/postinstall"
+cp "./Tools/write_converter_server_launch_agent.sh" "${PKG_SCRIPTS_PATH}/write_converter_server_launch_agent.sh"
+chmod +x "${PKG_SCRIPTS_PATH}/postinstall" "${PKG_SCRIPTS_PATH}/write_converter_server_launch_agent.sh"
+
 # Suppose we have build/azooKeyMac.app
 # Use this script to create a plist package for distribution
 # pkgbuild --analyze --root ./build/ pkg.plist
 
 # Create a temporary package
 pkgbuild --root ${EXPORT_PATH} \
+         --scripts ${PKG_SCRIPTS_PATH} \
          --component-plist pkg.plist --identifier dev.ensan.inputmethod.azooKeyMac \
          --version 0 \
          --install-location /Library/Input\ Methods \

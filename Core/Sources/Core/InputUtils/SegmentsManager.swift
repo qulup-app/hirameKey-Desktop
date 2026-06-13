@@ -17,11 +17,13 @@ public final class SegmentsManager {
     /// テストなどの設定注入のための型。外部には設定を露出させない。
     public struct Context {
         public init() {}
-        init(useZenzai: Bool) {
+        public init(useZenzai: Bool, resourcesDirectoryURL: URL? = nil) {
             self.useZenzai = useZenzai
+            self.resourcesDirectoryURL = resourcesDirectoryURL
         }
 
         var useZenzai: Bool = true
+        var resourcesDirectoryURL: URL?
     }
 
     public weak var delegate: (any SegmentManagerDelegate)?
@@ -97,7 +99,7 @@ public final class SegmentsManager {
             return nil
         }
 
-        let base = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/", isDirectory: false).path + "/lm"
+        let base = self.resourcesDirectoryURL.appendingPathComponent("lm", isDirectory: false).path
         let personal = containerURL.appendingPathComponent("Library/Application Support/p13n_v1").path + "/lm"
         // check personal lm existence
         guard [
@@ -120,6 +122,10 @@ public final class SegmentsManager {
         case other
     }
 
+    private enum ContextLength {
+        static let conversion = 30
+    }
+
     public func appendDebugMessage(_ string: String) {
         self.debugCandidates.insert(
             Candidate(
@@ -136,12 +142,16 @@ public final class SegmentsManager {
         }
     }
 
-    private func zenzaiMode(leftSideContext: String?, requestRichCandidates: Bool) -> ConvertRequestOptions.ZenzaiMode {
+    private func zenzaiMode(
+        leftSideContext: String?,
+        rightSideContext: String?,
+        requestRichCandidates: Bool
+    ) -> ConvertRequestOptions.ZenzaiMode {
         if !self.context.useZenzai {
             return .off
         }
         return .on(
-            weight: Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/ggml-model-Q5_K_M.gguf", isDirectory: false),
+            weight: self.resourcesDirectoryURL.appendingPathComponent("ggml-model-Q5_K_M.gguf", isDirectory: false),
             inferenceLimit: Config.ZenzaiInferenceLimit().value,
             requestRichCandidates: requestRichCandidates,
             personalizationMode: self.zenzaiPersonalizationMode,
@@ -149,10 +159,21 @@ public final class SegmentsManager {
                 .init(
                     profile: Config.ZenzaiProfile().value,
                     leftSideContext: leftSideContext,
+                    rightSideContext: rightSideContext,
                     enableAlignmentSeparator: true,
                     )
             )
         )
+    }
+
+    private var resourcesDirectoryURL: URL {
+        if let resourcesDirectoryURL = self.context.resourcesDirectoryURL {
+            return resourcesDirectoryURL
+        }
+        if let resourceURL = Bundle.main.resourceURL {
+            return resourceURL
+        }
+        return Bundle.main.bundleURL.appendingPathComponent("Contents/Resources", isDirectory: true)
     }
 
     private var metadata: ConvertRequestOptions.Metadata {
@@ -167,12 +188,12 @@ public final class SegmentsManager {
 
     private func options(
         leftSideContext: String?,
+        rightSideContext: String?,
         requestRichCandidates: Bool,
         requireJapanesePrediction: ConvertRequestOptions.PredictionMode,
         requireEnglishPrediction: ConvertRequestOptions.PredictionMode
     ) -> ConvertRequestOptions {
-        let canUseDebugTypoCorrection = Config.DebugTypoCorrection().value && self.hasDebugTypoCorrectionWeights()
-        return .init(
+        .init(
             requireJapanesePrediction: requireJapanesePrediction,
             requireEnglishPrediction: requireEnglishPrediction,
             keyboardLanguage: .ja_JP,
@@ -183,7 +204,11 @@ public final class SegmentsManager {
             sharedContainerURL: CompiledUserDictionaryStore.directoryURL(memoryDirectoryURL: self.azooKeyMemoryDir),
             textReplacer: .withDefaultEmojiDictionary(),
             specialCandidateProviders: KanaKanjiConverter.defaultSpecialCandidateProviders,
-            zenzaiMode: self.zenzaiMode(leftSideContext: leftSideContext, requestRichCandidates: requestRichCandidates),
+            zenzaiMode: self.zenzaiMode(
+                leftSideContext: leftSideContext,
+                rightSideContext: rightSideContext,
+                requestRichCandidates: requestRichCandidates
+            ),
             experimentalZenzaiPredictiveInput: true,
             typoCorrectionMode: .automatic,
             metadata: self.metadata
@@ -441,13 +466,24 @@ public final class SegmentsManager {
     }
 
     public func getCleanLeftSideContext(maxCount: Int) -> String? {
-        self.delegate?.getLeftSideContext(maxCount: 30).map {
+        self.delegate?.getLeftSideContext(maxCount: maxCount).map {
             var last = $0.split(separator: "\n", omittingEmptySubsequences: false).last ?? $0[...]
             // 前方の空白を削除する
             while last.first?.isWhitespace ?? false {
                 last = last.dropFirst()
             }
             return String(last)
+        }
+    }
+
+    public func getCleanRightSideContext(maxCount: Int) -> String? {
+        self.delegate?.getRightSideContext(maxCount: maxCount).map {
+            var first = $0.split(separator: "\n", omittingEmptySubsequences: false).first ?? $0[...]
+            // 後方の空白を削除する
+            while first.last?.isWhitespace ?? false {
+                first = first.dropLast()
+            }
+            return String(first)
         }
     }
 
@@ -463,7 +499,11 @@ public final class SegmentsManager {
     ///
     /// - Note:
     ///   This function is executed on the `@MainActor` to ensure UI consistency.
-    @MainActor private func updateRawCandidate(requestRichCandidates: Bool = false, forcedLeftSideContext: String? = nil) {
+    @MainActor private func updateRawCandidate(
+        requestRichCandidates: Bool = false,
+        forcedLeftSideContext: String? = nil,
+        forcedRightSideContext: String? = nil
+    ) {
         if self.lastOperation != .delete {
             self.backspaceAdjustedPredictionCandidate = nil
             self.backspaceTypoCorrectionLock = nil
@@ -507,11 +547,13 @@ public final class SegmentsManager {
 
         self.kanaKanjiConverter.importDynamicUserDictionary([], shortcuts: dynamicShortcuts)
 
-        let leftSideContext = forcedLeftSideContext ?? self.getCleanLeftSideContext(maxCount: 30)
+        let leftSideContext = forcedLeftSideContext ?? self.getCleanLeftSideContext(maxCount: ContextLength.conversion)
+        let rightSideContext = forcedRightSideContext ?? self.getCleanRightSideContext(maxCount: ContextLength.conversion)
         let result = self.kanaKanjiConverter.requestCandidates(
             self.composingText,
             options: options(
                 leftSideContext: leftSideContext,
+                rightSideContext: rightSideContext,
                 requestRichCandidates: requestRichCandidates,
                 requireJapanesePrediction: Config.DebugPredictiveTyping().value ? .manualMix : .disabled,
                 requireEnglishPrediction: Config.DebugPredictiveTyping().value ? .manualMix : .disabled
@@ -656,6 +698,11 @@ public final class SegmentsManager {
         var text: [Element]
 
         public var selectionRange: NSRange
+
+        public init(text: [Element], selectionRange: NSRange) {
+            self.text = text
+            self.selectionRange = selectionRange
+        }
 
         public func makeIterator() -> Array<Element>.Iterator {
             text.makeIterator()
@@ -889,12 +936,13 @@ public final class SegmentsManager {
             return []
         }
 
-        let leftSideContext = self.getCleanLeftSideContext(maxCount: 30) ?? ""
+        let leftSideContext = self.getCleanLeftSideContext(maxCount: ContextLength.conversion) ?? ""
         let typoCandidates = self.kanaKanjiConverter.experimentalRequestTypoCorrection(
             leftSideContext: leftSideContext,
             composingText: targetComposingText,
             options: options(
                 leftSideContext: leftSideContext,
+                rightSideContext: nil,
                 requestRichCandidates: false,
                 requireJapanesePrediction: .disabled,
                 requireEnglishPrediction: .disabled
@@ -929,6 +977,7 @@ public final class SegmentsManager {
             composingText,
             options: options(
                 leftSideContext: leftSideContext,
+                rightSideContext: nil,
                 requestRichCandidates: false,
                 requireJapanesePrediction: .disabled,
                 requireEnglishPrediction: .disabled
@@ -949,11 +998,11 @@ public final class SegmentsManager {
 
         let correctedDisplayText = self.convertedText(
             reading: correctedReading,
-            leftSideContext: self.getCleanLeftSideContext(maxCount: 30)
+            leftSideContext: self.getCleanLeftSideContext(maxCount: ContextLength.conversion)
         ) ?? correctedReading
         let previousComposingDisplayText = self.convertedText(
             reading: previousComposingText.convertTarget,
-            leftSideContext: self.getCleanLeftSideContext(maxCount: 30)
+            leftSideContext: self.getCleanLeftSideContext(maxCount: ContextLength.conversion)
         ) ?? previousComposingText.convertTarget
         guard Self.shouldPresentTypoCorrectionPredictionCandidate(
             candidateDisplayText: correctedDisplayText,
@@ -1056,6 +1105,7 @@ public final class SegmentsManager {
 
 public protocol SegmentManagerDelegate: AnyObject {
     func getLeftSideContext(maxCount: Int) -> String?
+    func getRightSideContext(maxCount: Int) -> String?
 }
 
 private extension ComposingText {

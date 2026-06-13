@@ -265,6 +265,54 @@ private func makeControlEvent(
     }
 }
 
+@Test func testEisuKeepsCompositionWhenSwitchingToEnglish() {
+    let event = makeControlEvent(
+        logicalKey: nil,
+        characters: nil,
+        modifiers: [],
+        keyCode: 102
+    )
+    let composingStates: [InputState] = [.composing, .previewing, .replaceSuggestion]
+    for state in composingStates {
+        let (action, callback) = state.event(
+            eventCore: event,
+            userAction: .英数,
+            inputLanguage: .japanese,
+            liveConversionEnabled: false,
+            enableDebugWindow: false,
+            enableSuggestion: false
+        )
+        guard case .selectInputLanguage(.english) = action, case .fallthrough = callback else {
+            Issue.record("Expected Eisu in \(state) to keep composition while switching, got \(action), \(callback)")
+            return
+        }
+    }
+}
+
+@Test func testKanaDoesNotDropJapaneseComposition() {
+    let event = makeControlEvent(
+        logicalKey: nil,
+        characters: nil,
+        modifiers: [],
+        keyCode: 104
+    )
+    let composingStates: [InputState] = [.composing, .previewing, .selecting, .replaceSuggestion]
+    for state in composingStates {
+        let (action, callback) = state.event(
+            eventCore: event,
+            userAction: .かな,
+            inputLanguage: .japanese,
+            liveConversionEnabled: false,
+            enableDebugWindow: false,
+            enableSuggestion: false
+        )
+        guard case .selectInputLanguage(.japanese) = action, case .fallthrough = callback else {
+            Issue.record("Expected Kana in Japanese \(state) to keep composition, got \(action), \(callback)")
+            return
+        }
+    }
+}
+
 @Test func testNonModifierUnknownStillFallsThroughDuringComposing() {
     // Ctrlを伴わない.unknownは従来通りfallthroughされる（既存挙動の回帰防止）
     let bareEvent = makeControlEvent(
@@ -284,5 +332,58 @@ private func makeControlEvent(
     guard case .fallthrough = action, case .fallthrough = callback else {
         Issue.record("Expected modifier-less unknown in composing state to fall through, got \(action), \(callback)")
         return
+    }
+}
+
+@Test func testShiftArrowRoutesToEditSegmentInCompositionStates() {
+    let shiftLeftEvent = makeControlEvent(
+        logicalKey: nil,
+        characters: nil,
+        modifiers: [.shift],
+        keyCode: 123
+    )
+    let shiftRightEvent = makeControlEvent(
+        logicalKey: nil,
+        characters: nil,
+        modifiers: [.shift],
+        keyCode: 124
+    )
+
+    guard case .navigation(.left) = UserAction.getUserAction(eventCore: shiftLeftEvent, inputLanguage: .japanese) else {
+        Issue.record("Expected Shift+Left to be navigation(.left)")
+        return
+    }
+    guard case .navigation(.right) = UserAction.getUserAction(eventCore: shiftRightEvent, inputLanguage: .japanese) else {
+        Issue.record("Expected Shift+Right to be navigation(.right)")
+        return
+    }
+
+    let states: [InputState] = [.composing, .previewing, .selecting]
+    for state in states {
+        let (leftAction, _) = state.event(
+            eventCore: shiftLeftEvent,
+            userAction: .navigation(.left),
+            inputLanguage: .japanese,
+            liveConversionEnabled: false,
+            enableDebugWindow: false,
+            enableSuggestion: false
+        )
+        guard case .editSegment(-1) = leftAction else {
+            Issue.record("Expected Shift+Left in \(state) to edit segment left, got \(leftAction)")
+            return
+        }
+
+        let (rightAction, _) = state.event(
+            eventCore: shiftRightEvent,
+            userAction: .navigation(.right),
+            inputLanguage: .japanese,
+            liveConversionEnabled: false,
+            enableDebugWindow: false,
+            enableSuggestion: false
+        )
+        guard case .editSegment(1) = rightAction else {
+            Issue.record("Expected Shift+Right in \(state) to edit segment right, got \(rightAction)")
+            return
+        }
     }
 }
