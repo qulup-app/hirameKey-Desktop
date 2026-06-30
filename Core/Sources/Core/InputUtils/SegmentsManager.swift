@@ -60,6 +60,7 @@ public final class SegmentsManager {
     private var suggestSelectionIndex: Int?
     private var backspaceAdjustedPredictionCandidate: PredictionCandidate?
     private var backspaceTypoCorrectionLock: BackspaceTypoCorrectionLock?
+    private var romajiRepairCandidates: [Candidate] = []
 
     public struct PredictionCandidate: Sendable, Equatable {
         public var displayText: String
@@ -251,6 +252,7 @@ public final class SegmentsManager {
         self.resetAdditionalCandidates()
         self.backspaceAdjustedPredictionCandidate = nil
         self.backspaceTypoCorrectionLock = nil
+        self.romajiRepairCandidates = []
         self.lastInputStyle = .direct
     }
 
@@ -267,6 +269,7 @@ public final class SegmentsManager {
         self.resetAdditionalCandidates()
         self.backspaceAdjustedPredictionCandidate = nil
         self.backspaceTypoCorrectionLock = nil
+        self.romajiRepairCandidates = []
         self.lastInputStyle = .direct
     }
 
@@ -282,6 +285,7 @@ public final class SegmentsManager {
         self.resetAdditionalCandidates()
         self.backspaceAdjustedPredictionCandidate = nil
         self.backspaceTypoCorrectionLock = nil
+        self.romajiRepairCandidates = []
         self.lastInputStyle = .direct
     }
 
@@ -305,6 +309,7 @@ public final class SegmentsManager {
         self.lastInputStyle = inputStyle
         self.composingText.insertAtCursorPosition(string, inputStyle: inputStyle)
         self.lastOperation = .insert
+        self.romajiRepairCandidates = []
         // ライブ変換がオフの場合は変換候補ウィンドウを出したい
         self.shouldShowCandidateWindow = !self.liveConversionEnabled
         self.updateRawCandidate()
@@ -315,6 +320,7 @@ public final class SegmentsManager {
         self.lastInputStyle = inputStyle
         self.composingText.insertAtCursorPosition(pieces.map { .init(piece: $0, inputStyle: inputStyle) })
         self.lastOperation = .insert
+        self.romajiRepairCandidates = []
         // ライブ変換がオフの場合は変換候補ウィンドウを出したい
         self.shouldShowCandidateWindow = !self.liveConversionEnabled
         self.updateRawCandidate()
@@ -348,6 +354,7 @@ public final class SegmentsManager {
         self.didExperienceSegmentEdition = true
         self.shouldShowCandidateWindow = true
         self.selectionIndex = nil
+        self.romajiRepairCandidates = []
         self.updateRawCandidate()
     }
 
@@ -363,6 +370,7 @@ public final class SegmentsManager {
         }
         self.composingText.deleteBackwardFromCursorPosition(count: count)
         self.lastOperation = .delete
+        self.romajiRepairCandidates = []
         // ライブ変換がオフの場合は変換候補ウィンドウを出したい
         self.shouldShowCandidateWindow = !self.liveConversionEnabled
         self.updateRawCandidate()
@@ -423,20 +431,29 @@ public final class SegmentsManager {
         guard let rawCandidates else {
             return nil
         }
+        let base: [Candidate]
         if !self.didExperienceSegmentEdition {
             if rawCandidates.firstClauseResults.contains(where: { self.composingText.isWholeComposingText(composingCount: $0.composingCount) }) {
                 // firstClauseCandidateがmainResultsと同じサイズの場合は、何もしない方が良い
-                return rawCandidates.mainResults
+                base = rawCandidates.mainResults
             } else {
                 // 変換範囲がエディットされていない場合
-                let seenAsFirstClauseResults = rawCandidates.firstClauseResults.mapSet(transform: \.text)
-                return rawCandidates.firstClauseResults + rawCandidates.mainResults.filter {
+                // 入力文字数の2倍を超える読みの学習候補は予測として不適切なため除外する
+                let inputLen = self.composingText.convertTarget.count
+                let filteredFirstClause = rawCandidates.firstClauseResults.filter { candidate in
+                    candidate.data.map(\.ruby).joined().count <= inputLen * 2
+                }
+                let seenAsFirstClauseResults = filteredFirstClause.mapSet(transform: \.text)
+                base = filteredFirstClause + rawCandidates.mainResults.filter {
                     !seenAsFirstClauseResults.contains($0.text)
                 }
             }
         } else {
-            return rawCandidates.mainResults
+            base = rawCandidates.mainResults
         }
+        guard !self.romajiRepairCandidates.isEmpty else { return base }
+        let seenTexts = base.mapSet(transform: \.text)
+        return base + self.romajiRepairCandidates.filter { !seenTexts.contains($0.text) }
     }
 
     private var candidateOffsetByAdditionalCandidates: Int {
@@ -564,7 +581,102 @@ public final class SegmentsManager {
 
     @MainActor public func update(requestRichCandidates: Bool) {
         self.updateRawCandidate(requestRichCandidates: requestRichCandidates)
+        self.updateRepairCandidates()
         self.shouldShowCandidateWindow = true
+    }
+
+    /// スペース変換時に隣接キー代替入力で再変換し、辞書ヒット候補を `romajiRepairCandidates` に格納する。
+    /// ローマ字入力では QWERTY 隣接キー、かな直接入力では JIS かな配列の隣接キーを使用する。
+    @MainActor private func updateRepairCandidates() {
+        guard Config.KanaFuzzyRepair().value else {
+            self.romajiRepairCandidates = []
+            return
+        }
+        let rawInput = self.composingText.input.map(\.piece).inputString(preferIntention: false)
+        guard !rawInput.isEmpty else {
+            self.romajiRepairCandidates = []
+            return
+        }
+        let leftSideContext = self.getCleanLeftSideContext(maxCount: ContextLength.conversion)
+        let currentConvertTarget = self.composingText.convertTarget
+        var seen: Set<String> = Set(rawCandidates?.mainResults.map(\.text) ?? [])
+        var repairCandidates: [Candidate] = []
+
+        // 入力スタイルに応じて代替入力文字列を生成
+        let alternatives: [(text: String, style: InputStyle)]
+        switch self.lastInputStyle {
+        case .mapped(let id):
+            // ローマ字入力: QWERTY 隣接キー代替
+            alternatives = KanaFuzzyRepair.romajiHypotheses(for: rawInput).map { ($0, .mapped(id: id)) }
+        case .direct:
+            // かな直接入力: JIS かな配列隣接キー代替
+            alternatives = KanaFuzzyRepair.kanaHypotheses(for: currentConvertTarget).map { ($0, .direct) }
+        default:
+            self.romajiRepairCandidates = []
+            return
+        }
+
+        // 確定時に元の composingText 全体を消費するよう composingCount を正規化する
+        let fullInputCount: ComposingCount = .inputCount(self.composingText.input.count)
+
+        for (altText, style) in alternatives {
+            var altComposingText = ComposingText()
+            altComposingText.insertAtCursorPosition(altText, inputStyle: style)
+            // 同じ読みに収束する代替は変換不要
+            guard altComposingText.convertTarget != currentConvertTarget else { continue }
+            let result = self.kanaKanjiConverter.requestCandidates(
+                altComposingText,
+                options: options(
+                    leftSideContext: leftSideContext,
+                    rightSideContext: nil,
+                    requestRichCandidates: false,
+                    requireJapanesePrediction: .disabled,
+                    requireEnglishPrediction: .disabled
+                )
+            )
+            for candidate in result.mainResults.prefix(2) {
+                guard !KanaFuzzyRepair.isFallback(candidate, convertTarget: altComposingText.convertTarget) else { continue }
+                guard seen.insert(candidate.text).inserted else { continue }
+                repairCandidates.append(Candidate(
+                    text: candidate.text,
+                    value: candidate.value,
+                    composingCount: fullInputCount,
+                    lastMid: candidate.lastMid,
+                    data: candidate.data
+                ))
+            }
+        }
+        // Phase 2: N-gram LM ベースの修復（weights がある場合のみ）
+        let typoReadings = self.requestTypoCorrectionCandidates(
+            composingText: self.composingText,
+            inputStyle: self.lastInputStyle
+        )
+        for reading in typoReadings.prefix(3) {
+            var altComposingText = ComposingText()
+            altComposingText.insertAtCursorPosition(reading, inputStyle: .direct)
+            let result = self.kanaKanjiConverter.requestCandidates(
+                altComposingText,
+                options: options(
+                    leftSideContext: leftSideContext,
+                    rightSideContext: nil,
+                    requestRichCandidates: false,
+                    requireJapanesePrediction: .disabled,
+                    requireEnglishPrediction: .disabled
+                )
+            )
+            for candidate in result.mainResults.prefix(2) {
+                guard !KanaFuzzyRepair.isFallback(candidate, convertTarget: reading) else { continue }
+                guard seen.insert(candidate.text).inserted else { continue }
+                repairCandidates.append(Candidate(
+                    text: candidate.text,
+                    value: candidate.value,
+                    composingCount: fullInputCount,
+                    lastMid: candidate.lastMid,
+                    data: candidate.data
+                ))
+            }
+        }
+        self.romajiRepairCandidates = repairCandidates
     }
 
     /// - note: 画面更新との整合性を保つため、この関数の実行前に左文脈を取得し、これを引数として与える
@@ -579,6 +691,7 @@ public final class SegmentsManager {
             self.didExperienceSegmentEdition = false
             self.shouldShowCandidateWindow = true
             self.selectionIndex = nil
+            self.romajiRepairCandidates = []
             self.updateRawCandidate(requestRichCandidates: true, forcedLeftSideContext: leftSideContext + candidate.text)
         }
     }
