@@ -68,4 +68,10 @@ extension Config {
         static let `default` = true
         public static let key: String = "dev.ensan.inputmethod.azooKeyMac.preference.includeContextInAITransform"
     }
+    /// スペース変換時に QWERTY 隣接キー置換による修復候補を追加する設定
+    public struct KanaFuzzyRepair: BoolConfigItem {
+        public init() {}
+        static let `default` = false
+        public static let key: String = "dev.ensan.inputmethod.azooKeyMac.preference.kanaFuzzyRepair"
+    }
 }
