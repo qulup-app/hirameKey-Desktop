@@ -1,7 +1,7 @@
 set -ex
 
-PROJECT_NAME="azooKeyMac"
-SCHEME="azooKeyMac"
+PROJECT_NAME="hirameKeyMac"
+SCHEME="hirameKeyMac"
 CONFIGURATION="Release"
 ARCHIVE_PATH="./build/archive.xcarchive"
 EXPORT_PATH="./build/export"
@@ -59,14 +59,14 @@ cp "${PKG_SCRIPTS_SOURCE_PATH}/postinstall" "${PKG_SCRIPTS_PATH}/postinstall"
 cp "./Tools/write_converter_server_launch_agent.sh" "${PKG_SCRIPTS_PATH}/write_converter_server_launch_agent.sh"
 chmod +x "${PKG_SCRIPTS_PATH}/postinstall" "${PKG_SCRIPTS_PATH}/write_converter_server_launch_agent.sh"
 
-# Suppose we have build/azooKeyMac.app
+# Suppose we have build/hirameKeyMac.app
 # Use this script to create a plist package for distribution
 # pkgbuild --analyze --root ./build/ pkg.plist
 
 # Create a temporary package
 pkgbuild --root ${EXPORT_PATH} \
          --scripts ${PKG_SCRIPTS_PATH} \
-         --component-plist pkg.plist --identifier dev.ensan.inputmethod.azooKeyMac \
+         --component-plist pkg.plist --identifier dev.ensan.inputmethod.hirameKeyMac \
          --version 0 \
          --install-location /Library/Input\ Methods \
          azooKey-tmp.pkg

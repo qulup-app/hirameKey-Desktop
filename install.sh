@@ -5,7 +5,7 @@ IGNORE_LINT=false
 DRY_RUN=false
 NO_PKILL=false
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INSTALL_APP_PATH="/Library/Input Methods/azooKeyMac.app"
+INSTALL_APP_PATH="/Library/Input Methods/hirameKeyMac.app"
 
 # Parse command-line options
 while [[ "$#" -gt 0 ]]; do
@@ -39,26 +39,28 @@ fi
 # Check if xcpretty is installed
 if command -v xcpretty &> /dev/null
 then
-    xcodebuild -project azooKeyMac.xcodeproj -scheme azooKeyMac clean archive -archivePath build/archive.xcarchive | xcpretty
+    xcodebuild -project azooKeyMac.xcodeproj -scheme hirameKeyMac clean archive -archivePath build/archive.xcarchive \
+        CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=NO PROVISIONING_PROFILE_SPECIFIER="" DEVELOPMENT_TEAM="" | xcpretty
 else
     echo "xcpretty could not be found. Proceeding without xcpretty."
-    xcodebuild -project azooKeyMac.xcodeproj -scheme azooKeyMac clean archive -archivePath build/archive.xcarchive
+    xcodebuild -project azooKeyMac.xcodeproj -scheme hirameKeyMac clean archive -archivePath build/archive.xcarchive \
+        CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=NO PROVISIONING_PROFILE_SPECIFIER="" DEVELOPMENT_TEAM=""
 fi
 
 if [ "$DRY_RUN" = true ]; then
     echo "DRY RUN: Would execute the following commands:"
-    echo "  sudo rm -rf /Library/Input\ Methods/azooKeyMac.app"
-    echo "  sudo cp -r build/archive.xcarchive/Products/Applications/azooKeyMac.app /Library/Input\ Methods/"
+    echo "  sudo rm -rf /Library/Input\ Methods/hirameKeyMac.app"
+    echo "  sudo cp -r build/archive.xcarchive/Products/Applications/hirameKeyMac.app /Library/Input\ Methods/"
     echo "  ${REPO_ROOT}/Tools/install_converter_server_launch_agent.sh \"${INSTALL_APP_PATH}\""
     if [ "$NO_PKILL" = false ]; then
-        echo "  pkill azooKeyMac || true"
+        echo "  pkill hirameKeyMac || true"
     fi
     echo "Build completed successfully. Use without --dry-run to actually install."
 else
-    sudo rm -rf /Library/Input\ Methods/azooKeyMac.app
-    sudo cp -r build/archive.xcarchive/Products/Applications/azooKeyMac.app /Library/Input\ Methods/
+    sudo rm -rf /Library/Input\ Methods/hirameKeyMac.app
+    sudo cp -r build/archive.xcarchive/Products/Applications/hirameKeyMac.app /Library/Input\ Methods/
     "${REPO_ROOT}/Tools/install_converter_server_launch_agent.sh" "${INSTALL_APP_PATH}"
     if [ "$NO_PKILL" = false ]; then
-        pkill azooKeyMac || true
+        pkill hirameKeyMac || true
     fi
 fi

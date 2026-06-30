@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import azooKeyMac
+@testable import hirameKeyMac
 
 class azooKeyMacTests: XCTestCase {
 

@@ -28,19 +28,19 @@
 			containerPortal = 1A41E60C26E745D9009B65D7 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 1A41E61326E745D9009B65D7;
-			remoteInfo = azooKeyMac;
+			remoteInfo = hirameKeyMac;
 		};
 		1A41E62F26E745DD009B65D7 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1A41E60C26E745D9009B65D7 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 1A41E61326E745D9009B65D7;
-			remoteInfo = azooKeyMac;
+			remoteInfo = hirameKeyMac;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		1A41E61426E745D9009B65D7 /* azooKeyMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = azooKeyMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A41E61426E745D9009B65D7 /* hirameKeyMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = hirameKeyMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A41E61B26E745DD009B65D7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1A41E62426E745DD009B65D7 /* azooKeyMacTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = azooKeyMacTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A41E62E26E745DD009B65D7 /* azooKeyMacUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = azooKeyMacUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -99,7 +99,7 @@
 			isa = PBXGroup;
 			children = (
 				55D3B7632DB36BDE00044FD1 /* Core */,
-				1A41E61626E745D9009B65D7 /* azooKeyMac */,
+				1A41E61626E745D9009B65D7 /* hirameKeyMac */,
 				55CE06ED2CB01F160002DAF1 /* azooKeyMacTests */,
 				55CE06F12CB01F160002DAF1 /* azooKeyMacUITests */,
 				1A41E61526E745D9009B65D7 /* Products */,
@@ -109,14 +109,14 @@
 		1A41E61526E745D9009B65D7 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				1A41E61426E745D9009B65D7 /* azooKeyMac.app */,
+				1A41E61426E745D9009B65D7 /* hirameKeyMac.app */,
 				1A41E62426E745DD009B65D7 /* azooKeyMacTests.xctest */,
 				1A41E62E26E745DD009B65D7 /* azooKeyMacUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		1A41E61626E745D9009B65D7 /* azooKeyMac */ = {
+		1A41E61626E745D9009B65D7 /* hirameKeyMac */ = {
 			isa = PBXGroup;
 			children = (
 				55CE06C72CB01F000002DAF1 /* InputController */,
@@ -152,9 +152,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		1A41E61326E745D9009B65D7 /* azooKeyMac */ = {
+		1A41E61326E745D9009B65D7 /* hirameKeyMac */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 1A41E63826E745DD009B65D7 /* Build configuration list for PBXNativeTarget "azooKeyMac" */;
+			buildConfigurationList = 1A41E63826E745DD009B65D7 /* Build configuration list for PBXNativeTarget "hirameKeyMac" */;
 			buildPhases = (
 				1A41E61026E745D9009B65D7 /* Sources */,
 				1A41E61126E745D9009B65D7 /* Frameworks */,
@@ -172,12 +172,12 @@
 				55CE06E92CB01F130002DAF1 /* Windows */,
 				55CE06F52CB01F180002DAF1 /* Preview Content */,
 			);
-			name = azooKeyMac;
+			name = hirameKeyMac;
 			packageProductDependencies = (
 				554A265F2DB37657003C5CFB /* Core */,
 			);
-			productName = azooKeyMac;
-			productReference = 1A41E61426E745D9009B65D7 /* azooKeyMac.app */;
+			productName = hirameKeyMac;
+			productReference = 1A41E61426E745D9009B65D7 /* hirameKeyMac.app */;
 			productType = "com.apple.product-type.application";
 		};
 		1A41E62326E745DD009B65D7 /* azooKeyMacTests */ = {
@@ -261,7 +261,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				1A41E61326E745D9009B65D7 /* azooKeyMac */,
+				1A41E61326E745D9009B65D7 /* hirameKeyMac */,
 				1A41E62326E745DD009B65D7 /* azooKeyMacTests */,
 				1A41E62D26E745DD009B65D7 /* azooKeyMacUITests */,
 			);
@@ -354,12 +354,12 @@
 /* Begin PBXTargetDependency section */
 		1A41E62626E745DD009B65D7 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 1A41E61326E745D9009B65D7 /* azooKeyMac */;
+			target = 1A41E61326E745D9009B65D7 /* hirameKeyMac */;
 			targetProxy = 1A41E62526E745DD009B65D7 /* PBXContainerItemProxy */;
 		};
 		1A41E63026E745DD009B65D7 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 1A41E61326E745D9009B65D7 /* azooKeyMac */;
+			target = 1A41E61326E745D9009B65D7 /* hirameKeyMac */;
 			targetProxy = 1A41E62F26E745DD009B65D7 /* PBXContainerItemProxy */;
 		};
 		554A26622DB3765F003C5CFB /* PBXTargetDependency */ = {
@@ -528,7 +528,7 @@
 				LLVM_LTO = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.ensan.inputmethod.azooKeyMac;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.ensan.inputmethod.hirameKeyMac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_INTEROP_MODE = objcxx;
@@ -564,7 +564,7 @@
 				LLVM_LTO = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.ensan.inputmethod.azooKeyMac;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.ensan.inputmethod.hirameKeyMac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_INTEROP_MODE = objcxx;
@@ -592,7 +592,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/azooKeyMac.app/Contents/MacOS/azooKeyMac";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/hirameKeyMac.app/Contents/MacOS/hirameKeyMac";
 			};
 			name = Debug;
 		};
@@ -616,7 +616,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/azooKeyMac.app/Contents/MacOS/azooKeyMac";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/hirameKeyMac.app/Contents/MacOS/hirameKeyMac";
 			};
 			name = Release;
 		};
@@ -638,7 +638,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = azooKeyMac;
+				TEST_TARGET_NAME = hirameKeyMac;
 			};
 			name = Debug;
 		};
@@ -660,7 +660,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = azooKeyMac;
+				TEST_TARGET_NAME = hirameKeyMac;
 			};
 			name = Release;
 		};
@@ -676,7 +676,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		1A41E63826E745DD009B65D7 /* Build configuration list for PBXNativeTarget "azooKeyMac" */ = {
+		1A41E63826E745DD009B65D7 /* Build configuration list for PBXNativeTarget "hirameKeyMac" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1A41E63926E745DD009B65D7 /* Debug */,

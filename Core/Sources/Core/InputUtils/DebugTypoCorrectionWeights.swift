@@ -50,8 +50,8 @@ public enum DebugTypoCorrectionWeights {
         Self.requiredFiles.map(\.fileName)
     }
 
-    public static func modelDirectoryURL(azooKeyApplicationSupportDirectoryURL: URL) -> URL {
-        azooKeyApplicationSupportDirectoryURL
+    public static func modelDirectoryURL(hirameKeyApplicationSupportDirectoryURL: URL) -> URL {
+        hirameKeyApplicationSupportDirectoryURL
             .appendingPathComponent("downloaded", isDirectory: true)
             .appendingPathComponent(Self.bundleDirectoryName, isDirectory: true)
     }

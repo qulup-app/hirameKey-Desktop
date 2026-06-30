@@ -1,11 +1,11 @@
 import Foundation
 
 public enum AppGroup {
-    public static let azooKeyMacIdentifier = "group.dev.ensan.inputmethod.azooKeyMac"
+    public static let hirameKeyMacIdentifier = "group.dev.ensan.inputmethod.hirameKeyMac"
 
     #if os(macOS)
     public static func containerURL(fileManager: FileManager = .default) -> URL? {
-        fileManager.containerURL(forSecurityApplicationGroupIdentifier: Self.azooKeyMacIdentifier)
+        fileManager.containerURL(forSecurityApplicationGroupIdentifier: Self.hirameKeyMacIdentifier)
     }
 
     public static func applicationSupportDirectoryURL(fileManager: FileManager = .default) -> URL {

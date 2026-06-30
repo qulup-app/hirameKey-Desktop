@@ -65,29 +65,29 @@ struct ConfigWindow: View {
         case successfulUpdate
     }
 
-    private var azooKeyApplicationSupportDirectoryURL: URL {
+    private var hirameKeyApplicationSupportDirectoryURL: URL {
         AppGroup.applicationSupportDirectoryURL()
     }
 
-    private var legacyAzooKeyApplicationSupportDirectoryURL: URL {
+    private var legacyHirameKeyApplicationSupportDirectoryURL: URL {
         if #available(macOS 13, *) {
             URL.applicationSupportDirectory
-                .appending(path: "azooKey", directoryHint: .isDirectory)
+                .appending(path: "hirameKey", directoryHint: .isDirectory)
         } else {
             FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-                .appendingPathComponent("azooKey", isDirectory: true)
+                .appendingPathComponent("hirameKey", isDirectory: true)
         }
     }
 
     private var debugTypoCorrectionModelDirectoryURL: URL {
         DebugTypoCorrectionWeights.modelDirectoryURL(
-            azooKeyApplicationSupportDirectoryURL: self.azooKeyApplicationSupportDirectoryURL
+            hirameKeyApplicationSupportDirectoryURL: self.hirameKeyApplicationSupportDirectoryURL
         )
     }
 
     private var legacyDebugTypoCorrectionModelDirectoryURL: URL {
         DebugTypoCorrectionWeights.modelDirectoryURL(
-            azooKeyApplicationSupportDirectoryURL: self.legacyAzooKeyApplicationSupportDirectoryURL
+            hirameKeyApplicationSupportDirectoryURL: self.legacyHirameKeyApplicationSupportDirectoryURL
         )
     }
 
@@ -258,10 +258,10 @@ struct ConfigWindow: View {
     private func openAzooKeyDataDirectoryInFinder() {
         do {
             try FileManager.default.createDirectory(
-                at: self.azooKeyApplicationSupportDirectoryURL,
+                at: self.hirameKeyApplicationSupportDirectoryURL,
                 withIntermediateDirectories: true
             )
-            NSWorkspace.shared.activateFileViewerSelecting([self.azooKeyApplicationSupportDirectoryURL])
+            NSWorkspace.shared.activateFileViewerSelecting([self.hirameKeyApplicationSupportDirectoryURL])
         } catch {
             // no-op
         }
@@ -685,7 +685,7 @@ struct ConfigWindow: View {
                         }
                     }
                 } label: {
-                    Text("azooKeyユーザ辞書")
+                    Text("hirameKeyユーザ辞書")
                 }
                 LabeledContent {
                     HStack {

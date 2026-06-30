@@ -1,6 +1,6 @@
 //
 //  hankaku2zenkaku.swift
-//  azooKeyMac
+//  hirameKeyMac
 //
 //  Created by miwa on 2024/03/25.
 //

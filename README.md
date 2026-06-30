@@ -94,13 +94,13 @@ git -C azooKeyMac/Resources/base_n5_lm lfs pull
 ls -lh azooKeyMac/Resources/zenz-v3.1-small-gguf/ggml-model-Q5_K_M.gguf
 ```
 
-#### 2. 署名の設定（初回のみ）
+#### 2. 署名の設定（Xcodeで直接ビルド・デバッグする場合）
 
-`install.sh` はアーカイブビルドを行うため、Xcode上で署名設定が通っている必要があります。Apple Developer Programに加入していない場合は、Personal Teamでの署名に切り替えてください。
+`install.sh` を使う場合は不要です。Xcode から直接ビルド（Cmd+R）したい場合のみ、以下を設定してください。
 
 * `azooKeyMac.xcodeproj` を Xcode で開く
-* azooKeyMac ターゲット → Signing & Capabilities で Team を自身の Personal Team に変更
-* リポジトリ内のバンドルID（`dev.ensan.inputmethod.azooKeyMac` など）を、自身の所有するプレフィックスに一括置換（例: `dev.yourname.inputmethod.azooKeyMac`）
+* hirameKeyMac ターゲット → Signing & Capabilities で Team を自身の Personal Team に変更
+* リポジトリ内のバンドルID（`dev.ensan.inputmethod.hirameKeyMac` など）を、自身の所有するプレフィックスに一括置換（例: `dev.yourname.inputmethod.hirameKeyMac`）
 
 #### 3. ビルド＆インストール
 

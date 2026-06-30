@@ -179,11 +179,11 @@ public final class SegmentsManager {
 
     private var metadata: ConvertRequestOptions.Metadata {
         if let tag = PackageMetadata.gitTag {
-            .init(versionString: "azooKey on macOS (\(tag))")
+            .init(versionString: "hirameKey on macOS (\(tag))")
         } else if let commit = PackageMetadata.gitCommit {
-            .init(versionString: "azooKey on macOS (\(commit.prefix(7)))")
+            .init(versionString: "hirameKey on macOS (\(commit.prefix(7)))")
         } else {
-            .init(versionString: "azooKey on macOS (unknown version)")
+            .init(versionString: "hirameKey on macOS (unknown version)")
         }
     }
 
@@ -201,8 +201,8 @@ public final class SegmentsManager {
             englishCandidateInRoman2KanaInput: false,
             fullWidthRomanCandidate: true,
             learningType: Config.Learning().value.learningType,
-            memoryDirectoryURL: self.azooKeyMemoryDir,
-            sharedContainerURL: CompiledUserDictionaryStore.directoryURL(memoryDirectoryURL: self.azooKeyMemoryDir),
+            memoryDirectoryURL: self.hirameKeyMemoryDir,
+            sharedContainerURL: CompiledUserDictionaryStore.directoryURL(memoryDirectoryURL: self.hirameKeyMemoryDir),
             textReplacer: .withDefaultEmojiDictionary(),
             specialCandidateProviders: KanaKanjiConverter.defaultSpecialCandidateProviders,
             zenzaiMode: self.zenzaiMode(
@@ -220,13 +220,13 @@ public final class SegmentsManager {
         DebugTypoCorrectionWeights.hasRequiredWeightFiles(modelDirectoryURL: self.downloadedInputN5LMDir)
     }
 
-    public var azooKeyMemoryDir: URL {
+    public var hirameKeyMemoryDir: URL {
         self.applicationDirectoryURL
     }
 
     public var downloadedInputN5LMDir: URL {
         DebugTypoCorrectionWeights.modelDirectoryURL(
-            azooKeyApplicationSupportDirectoryURL: self.applicationDirectoryURL.deletingLastPathComponent()
+            hirameKeyApplicationSupportDirectoryURL: self.applicationDirectoryURL.deletingLastPathComponent()
         )
     }
 

@@ -16,8 +16,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "1A41E61326E745D9009B65D7"
-               BuildableName = "azooKeyMac.app"
-               BlueprintName = "azooKeyMac"
+               BuildableName = "hirameKeyMac.app"
+               BlueprintName = "hirameKeyMac"
                ReferencedContainer = "container:azooKeyMac.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -67,8 +67,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "1A41E61326E745D9009B65D7"
-            BuildableName = "azooKeyMac.app"
-            BlueprintName = "azooKeyMac"
+            BuildableName = "hirameKeyMac.app"
+            BlueprintName = "hirameKeyMac"
             ReferencedContainer = "container:azooKeyMac.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -84,8 +84,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "1A41E61326E745D9009B65D7"
-            BuildableName = "azooKeyMac.app"
-            BlueprintName = "azooKeyMac"
+            BuildableName = "hirameKeyMac.app"
+            BlueprintName = "hirameKeyMac"
             ReferencedContainer = "container:azooKeyMac.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

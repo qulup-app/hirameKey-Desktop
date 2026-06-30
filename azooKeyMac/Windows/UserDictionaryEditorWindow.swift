@@ -1,6 +1,6 @@
 //
 //  UserDictionaryEditorWindow.swift
-//  azooKeyMac
+//  hirameKeyMac
 //
 //  Created by miwa on 2024/09/22.
 //

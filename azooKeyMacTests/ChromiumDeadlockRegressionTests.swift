@@ -14,7 +14,7 @@
 import XCTest
 import Core
 import KanaKanjiConverterModuleWithDefaultDictionary
-@testable import azooKeyMac
+@testable import hirameKeyMac
 
 @MainActor
 final class ChromiumDeadlockRegressionTests: XCTestCase {

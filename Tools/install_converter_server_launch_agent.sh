@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-service_name="dev.ensan.inputmethod.azooKeyMac.ConverterServer"
-default_app_path="${BUILT_PRODUCTS_DIR:-/tmp/azooKeyDesktopDerivedData/Build/Products/Debug}/azooKeyMac.app"
+service_name="dev.ensan.inputmethod.hirameKeyMac.ConverterServer"
+default_app_path="${BUILT_PRODUCTS_DIR:-/tmp/azooKeyDesktopDerivedData/Build/Products/Debug}/hirameKeyMac.app"
 app_path="${1:-${default_app_path}}"
 server_path="${app_path}/Contents/MacOS/ConverterServer"
 agent_dir="${HOME}/Library/LaunchAgents"
@@ -12,7 +12,7 @@ script_dir="$(cd "$(dirname "$0")" && pwd)"
 
 if [ ! -x "${server_path}" ]; then
     echo "ConverterServer not found: ${server_path}" >&2
-    echo "Build azooKeyMac first, or pass the app bundle path as the first argument." >&2
+    echo "Build hirameKeyMac first, or pass the app bundle path as the first argument." >&2
     exit 1
 fi
 
