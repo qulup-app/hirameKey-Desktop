@@ -718,7 +718,8 @@ public final class SegmentsManager {
                 )
             )
             for candidate in result.mainResults.prefix(2) {
-                guard !KanaFuzzyRepair.isFallback(candidate, convertTarget: reading) else { continue }
+                // Phase 1 と異なり、reading 自体が正しい全かな語であるケースがあるため
+                // isFallback（text == reading）では弾かない。既存候補との重複は seen で排除する。
                 guard seen.insert(candidate.text).inserted else { continue }
                 repairCandidates.append(Candidate(
                     text: candidate.text,
