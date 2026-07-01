@@ -444,6 +444,8 @@ class azooKeyMacInputController: IMKInputController, NSMenuItemValidation { // s
             self.transformSelectedText(selectedText: selectedText, prompt: prompt)
         case .fallthroughToApplication:
             break
+        case .requestRepairCandidates:
+            self.requestRepairCandidates()
         }
     }
 
@@ -934,6 +936,36 @@ extension azooKeyMacInputController {
             }
         )
         self.segmentsManager.appendDebugMessage("requestReplaceSuggestion: 終了")
+    }
+
+    // MARK: - Repair Candidate Request Handling
+    /// スペースキー後に修復候補（隣接キー代替入力）を取得し、候補ウィンドウに追加表示する。
+    /// `requestReplaceSuggestion` と同じ「クライアント主導の 2 回目 XPC 往復」パターン。
+    @MainActor func requestRepairCandidates() {
+        guard let currentConverterView, !currentConverterView.isEmpty else { return }
+        // リクエスト発行時点の convertTarget を capture しておく
+        let capturedConvertTarget = currentConverterView.convertTarget
+        self.converterServerClient.sendIfSessionOpen(
+            { _ in .composition(.requestRepairCandidates(context: self.currentConverterTextContext())) },
+            completion: { [weak self] response in
+                Task { @MainActor in
+                    guard let self, let response else { return }
+                    // convertTarget が変わっていたら破棄
+                    guard response.snapshot.convertTarget == capturedConvertTarget,
+                          self.currentConverterView?.convertTarget == capturedConvertTarget else { return }
+                    // 修復候補をマージする際、候補選択状態（selectionIndex）の巻き戻しを防ぐ。
+                    // リクエスト発行後にユーザーが候補を選択移動していた場合は現在の index を維持する。
+                    var snapshot = response.snapshot
+                    if let currentWindow = self.currentConverterView?.candidateWindow,
+                       case let .selecting(newCandidates, _) = snapshot.candidateWindow,
+                       case let .selecting(_, currentIdx) = currentWindow {
+                        snapshot.candidateWindow = .selecting(newCandidates, selectionIndex: currentIdx)
+                    }
+                    self.currentConverterView = snapshot
+                    self.refreshCandidateWindow()
+                }
+            }
+        )
     }
 
     // MARK: - Window Management

@@ -581,13 +581,15 @@ public final class SegmentsManager {
 
     @MainActor public func update(requestRichCandidates: Bool) {
         self.updateRawCandidate(requestRichCandidates: requestRichCandidates)
-        self.updateRepairCandidates()
+        // 修復候補は非同期で 2 回目のリクエストで生成するため、ここではクリアのみ行う。
+        self.romajiRepairCandidates = []
         self.shouldShowCandidateWindow = true
     }
 
     /// スペース変換時に隣接キー代替入力で再変換し、辞書ヒット候補を `romajiRepairCandidates` に格納する。
     /// ローマ字入力では QWERTY 隣接キー、かな直接入力では JIS かな配列の隣接キーを使用する。
-    @MainActor private func updateRepairCandidates() {
+    /// Client からの 2 回目 XPC コマンド（`.requestRepairCandidates`）で呼ばれる。
+    @MainActor public func updateRepairCandidates() {
         guard Config.KanaFuzzyRepair().value else {
             self.romajiRepairCandidates = []
             return
@@ -605,6 +607,9 @@ public final class SegmentsManager {
         // 入力スタイルに応じて代替入力文字列を生成
         let alternatives: [(text: String, style: InputStyle)]
         switch self.lastInputStyle {
+        case .mapped(let id) where id == .defaultKanaJIS || id == .defaultKanaUS:
+            // かなキーボード（JIS かな / US かな）入力: JIS かな配列隣接キー代替
+            alternatives = KanaFuzzyRepair.kanaHypotheses(for: currentConvertTarget).map { ($0, .mapped(id: id)) }
         case .mapped(let id):
             // ローマ字入力: QWERTY 隣接キー代替
             alternatives = KanaFuzzyRepair.romajiHypotheses(for: rawInput).map { ($0, .mapped(id: id)) }

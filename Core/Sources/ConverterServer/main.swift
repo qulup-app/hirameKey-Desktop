@@ -136,6 +136,10 @@ final class ConverterServer: NSObject, ConverterServerXPCProtocol, @unchecked Se
             let text = session.manager.commitMarkedText(inputState: inputState.inputState)
             let effects: [ConverterClientEffect] = text.isEmpty ? [] : [.insertText(text)]
             return makeResponse(for: session, inputState: .none, effects: effects, responseInputState: ConverterInputState.none)
+        case .requestRepairCandidates(let context):
+            session.setContext(context)
+            session.manager.updateRepairCandidates()
+            return makeResponse(for: session, inputState: .selecting)
         }
     }
 
