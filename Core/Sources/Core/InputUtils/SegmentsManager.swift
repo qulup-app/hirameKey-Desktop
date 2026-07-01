@@ -1106,29 +1106,54 @@ public final class SegmentsManager {
 
     @MainActor
     private func lmBasedBackspaceTypoCorrectionLock(previousComposingText: ComposingText) -> BackspaceTypoCorrectionLock? {
-        let typoCorrectionCandidates = self.requestTypoCorrectionCandidates(
-            composingText: previousComposingText,
-            inputStyle: self.lastInputStyle
-        )
-        guard let correctedReading = typoCorrectionCandidates.first else {
-            return nil
-        }
-
-        let correctedDisplayText = self.convertedText(
-            reading: correctedReading,
-            leftSideContext: self.getCleanLeftSideContext(maxCount: ContextLength.conversion)
-        ) ?? correctedReading
         let previousComposingDisplayText = self.convertedText(
             reading: previousComposingText.convertTarget,
             leftSideContext: self.getCleanLeftSideContext(maxCount: ContextLength.conversion)
         ) ?? previousComposingText.convertTarget
+
+        // オリジナル入力で提示可能な訂正候補を探す
+        let originalCandidates = self.requestTypoCorrectionCandidates(
+            composingText: previousComposingText,
+            inputStyle: self.lastInputStyle
+        )
+        if let lock = self.firstPresentableTypoLock(candidates: originalCandidates, previousComposingDisplayText: previousComposingDisplayText) {
+            return lock
+        }
+
+        // オリジナルで提示可能候補がない場合（空または shouldPresent 未達）、KanaFuzzyRepair 仮説にカスケード
+        // 末尾位置1件のみ試す（同期 LM 呼び出しを最大2回に抑制）
+        guard Config.KanaFuzzyRepair().value else { return nil }
+        let rawInput = previousComposingText.input.map(\.piece).inputString(preferIntention: false)
+        let currentConvertTarget = previousComposingText.convertTarget
+        let hypothesis: (String, InputStyle)?
+        switch self.lastInputStyle {
+        case .mapped(let id) where id == .defaultKanaJIS || id == .defaultKanaUS:
+            hypothesis = KanaFuzzyRepair.kanaLastCharHypothesis(for: currentConvertTarget).map { ($0, .mapped(id: id)) }
+        case .roman2kana:
+            hypothesis = KanaFuzzyRepair.romajiLastCharHypothesis(for: rawInput).map { ($0, .roman2kana) }
+        case .mapped(let id):
+            hypothesis = KanaFuzzyRepair.romajiLastCharHypothesis(for: rawInput).map { ($0, .mapped(id: id)) }
+        case .direct:
+            hypothesis = KanaFuzzyRepair.kanaLastCharHypothesis(for: currentConvertTarget).map { ($0, .direct) }
+        }
+        guard let (text, style) = hypothesis else { return nil }
+        var altComposingText = ComposingText()
+        altComposingText.insertAtCursorPosition(text, inputStyle: style)
+        guard altComposingText.convertTarget != currentConvertTarget else { return nil }
+        let altCandidates = self.requestTypoCorrectionCandidates(composingText: altComposingText, inputStyle: style)
+        return self.firstPresentableTypoLock(candidates: altCandidates, previousComposingDisplayText: previousComposingDisplayText)
+    }
+
+    private func firstPresentableTypoLock(candidates: [String], previousComposingDisplayText: String) -> BackspaceTypoCorrectionLock? {
+        guard let correctedReading = candidates.first else { return nil }
+        let correctedDisplayText = self.convertedText(
+            reading: correctedReading,
+            leftSideContext: self.getCleanLeftSideContext(maxCount: ContextLength.conversion)
+        ) ?? correctedReading
         guard Self.shouldPresentTypoCorrectionPredictionCandidate(
             candidateDisplayText: correctedDisplayText,
             previousComposingDisplayText: previousComposingDisplayText
-        ) else {
-            return nil
-        }
-
+        ) else { return nil }
         return .init(displayText: correctedDisplayText, targetReading: correctedReading)
     }
 

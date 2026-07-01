@@ -168,6 +168,33 @@ enum KanaFuzzyRepair {
 
     // MARK: - 共通
 
+    /// 末尾から遡って最初の eligible 文字位置のみを置換した仮説を 1 件返す。
+    /// バックスペース訂正のカスケード用（末尾タイポが最も疑わしい）。
+    static func romajiLastCharHypothesis(for romaji: String) -> String? {
+        let chars = Array(romaji.lowercased())
+        for i in chars.indices.reversed() {
+            guard let neighbors = romajiNeighbors[chars[i]], let first = neighbors.first else { continue }
+            var alt = chars
+            alt[i] = first
+            return String(alt)
+        }
+        return nil
+    }
+
+    /// 末尾から遡って最初の eligible かな文字位置のみを置換した仮説を 1 件返す。
+    /// バックスペース訂正のカスケード用（末尾タイポが最も疑わしい）。
+    static func kanaLastCharHypothesis(for kana: String) -> String? {
+        let chars = Array(kana)
+        for i in chars.indices.reversed() {
+            let neighbors = jisKanaNeighbors(for: chars[i])
+            guard let first = neighbors.first else { continue }
+            var alt = chars
+            alt[i] = first
+            return String(alt)
+        }
+        return nil
+    }
+
     /// 候補のテキストが入力かなと一致する（辞書ヒットなしのフォールバック）かどうか判定する。
     static func isFallback(_ candidate: Candidate, convertTarget: String) -> Bool {
         candidate.text.toHiragana() == convertTarget.toHiragana()

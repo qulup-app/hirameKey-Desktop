@@ -34,3 +34,39 @@ import Testing
     // effectiveMax = max(18, 20) = 20 件以上返る
     #expect(results.count >= 20)
 }
+
+// MARK: - romajiLastCharHypothesis
+
+@Test func testRomajiLastCharHypothesis_shortInput() {
+    // "ha": reversed → 末尾 'a'（第1隣接 'q'）が選ばれる → "hq"
+    #expect(KanaFuzzyRepair.romajiLastCharHypothesis(for: "ha") == "hq")
+}
+
+@Test func testRomajiLastCharHypothesis_selectsLastNotFirst() {
+    // "ah": reversed → 末尾 'h'（第1隣接 'g'）が選ばれる → "ag"（先頭 'a' は選ばない）
+    #expect(KanaFuzzyRepair.romajiLastCharHypothesis(for: "ah") == "ag")
+}
+
+@Test func testRomajiLastCharHypothesis_longInput() {
+    // 末尾 'i' の第1隣接は 'u'
+    #expect(KanaFuzzyRepair.romajiLastCharHypothesis(for: "nihongohanomoshiroi") == "nihongohanomoshirou")
+}
+
+// MARK: - kanaLastCharHypothesis
+
+@Test func testKanaLastCharHypothesis_singleChar() {
+    // 'と' の第1隣接は 'た'（row=2,col=1 → dr=-1,dc=-1 → row=1,col=0）
+    #expect(KanaFuzzyRepair.kanaLastCharHypothesis(for: "と") == "た")
+}
+
+@Test func testKanaLastCharHypothesis_longInput() {
+    // 20文字、末尾 'と' の第1隣接は 'た'
+    let longKana = "あいうえおかきくけこさしすせそたちつてと"
+    #expect(KanaFuzzyRepair.kanaLastCharHypothesis(for: longKana) == "あいうえおかきくけこさしすせそたちつてた")
+}
+
+@Test func testKanaLastCharHypothesis_nilForNoEligible() {
+    // eligible な文字がなければ nil を返す
+    // ゛゜ は隣接なし（eligible でない）
+    #expect(KanaFuzzyRepair.kanaLastCharHypothesis(for: "") == nil)
+}
