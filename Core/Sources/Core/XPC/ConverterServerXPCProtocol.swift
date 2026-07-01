@@ -104,6 +104,9 @@ public enum ConverterCompositionCommand: Codable, Sendable {
 
     /// 現在の marked text を確定し、必要なら `insertText` effect を返す。
     case commit(inputState: ConverterInputState)
+
+    /// 修復候補（隣接キー代替入力）を非同期生成し、既存の候補リストに追加して snapshot を返す。
+    case requestRepairCandidates(context: ConverterTextContext)
 }
 
 /// 通常の変換候補ウィンドウに対する操作。
@@ -375,6 +378,8 @@ public enum ConverterClientEffect: Codable, Sendable, Equatable {
     case showPromptInputWindow
     case transformSelectedText(String, String)
     case fallthroughToApplication
+    /// 修復候補の非同期生成を Client に依頼する（2回目 XPC 往復）。
+    case requestRepairCandidates
 }
 
 /// Converter Process から Client へ返す共通レスポンス。

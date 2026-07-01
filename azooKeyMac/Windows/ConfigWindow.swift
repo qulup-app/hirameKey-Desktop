@@ -4,6 +4,7 @@ import SwiftUI
 
 struct ConfigWindow: View {
     @ConfigState private var liveConversion = Config.LiveConversion()
+    @ConfigState private var kanaFuzzyRepair = Config.KanaFuzzyRepair()
     @ConfigState private var inputStyle = Config.InputStyle()
     @ConfigState private var zenzaiProfile = Config.ZenzaiProfile()
     @ConfigState private var zenzaiPersonalizationLevel = Config.ZenzaiPersonalizationLevel()
@@ -731,6 +732,7 @@ struct ConfigWindow: View {
 
             Section {
                 Toggle("ライブ変換を有効化", isOn: $liveConversion)
+                Toggle("タイプミス修復候補を表示", isOn: $kanaFuzzyRepair)
                 HStack {
                     TextField("変換プロフィール", text: $zenzaiProfile, prompt: Text("例：田中太郎/高校生"))
                     helpButton(

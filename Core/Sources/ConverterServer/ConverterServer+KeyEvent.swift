@@ -121,6 +121,10 @@ extension ConverterServer {
         case .enterCandidateSelectionMode:
             manager.insertCompositionSeparator(inputStyle: inputStyle, skipUpdate: true)
             manager.update(requestRichCandidates: true)
+            // 修復候補が有効な場合、クライアントに 2 回目のリクエストを依頼する。
+            if Config.KanaFuzzyRepair().value {
+                effects.append(.requestRepairCandidates)
+            }
         case .submitSelectedCandidate:
             submitSelectedCandidate(manager: manager, leftSideContext: leftSideContext, effects: &effects)
         case .selectNextCandidate:

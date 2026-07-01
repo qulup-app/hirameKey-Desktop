@@ -37,17 +37,26 @@ enum KanaFuzzyRepair {
     ]
 
     /// ローマ字の各文字を QWERTY 隣接キーで置換した代替文字列を返す。
-    static func romajiHypotheses(for romaji: String, maxCount: Int = 6) -> [String] {
+    /// 位置横断ラウンドロビンで生成する。pass 0 は全位置を必ずカバーするため
+    /// maxCount より入力長が長い場合は入力長を実効上限とする。
+    static func romajiHypotheses(for romaji: String, maxCount: Int = 18) -> [String] {
         let chars = Array(romaji.lowercased())
+        let neighbors = chars.map { romajiNeighbors[$0] ?? [] }
+        let maxPass = neighbors.map(\.count).max() ?? 0
+        // pass 0 完走に必要な件数を下限にして全位置をカバーする
+        let eligibleCount = neighbors.filter { !$0.isEmpty }.count
+        let effectiveMax = max(maxCount, eligibleCount)
         var results: [String] = []
-        for i in chars.indices {
-            guard let neighborList = romajiNeighbors[chars[i]] else { continue }
-            for neighbor in neighborList {
+        for pass in 0..<maxPass {
+            for i in chars.indices {
+                guard pass < neighbors[i].count else { continue }
                 var alt = chars
-                alt[i] = neighbor
+                alt[i] = neighbors[i][pass]
                 results.append(String(alt))
-                if results.count >= maxCount { return results }
+                // pass 1 以降は append ごとに上限チェック（pass 0 は全位置を完走させる）
+                if pass > 0, results.count >= effectiveMax { break }
             }
+            if results.count >= effectiveMax { break }
         }
         return results
     }
@@ -133,17 +142,26 @@ enum KanaFuzzyRepair {
     }
 
     /// かな文字列の各文字を JIS かな隣接キーで置換した代替文字列を返す。
-    static func kanaHypotheses(for kana: String, maxCount: Int = 6) -> [String] {
+    /// 位置横断ラウンドロビンで生成する。pass 0 は全位置を必ずカバーするため
+    /// maxCount より入力長が長い場合は入力長を実効上限とする。
+    static func kanaHypotheses(for kana: String, maxCount: Int = 18) -> [String] {
         let chars = Array(kana)
+        let neighbors = chars.map { jisKanaNeighbors(for: $0) }
+        let maxPass = neighbors.map(\.count).max() ?? 0
+        // pass 0 完走に必要な件数を下限にして全位置をカバーする
+        let eligibleCount = neighbors.filter { !$0.isEmpty }.count
+        let effectiveMax = max(maxCount, eligibleCount)
         var results: [String] = []
-        for i in chars.indices {
-            let neighborList = jisKanaNeighbors(for: chars[i])
-            for neighbor in neighborList {
+        for pass in 0..<maxPass {
+            for i in chars.indices {
+                guard pass < neighbors[i].count else { continue }
                 var alt = chars
-                alt[i] = neighbor
+                alt[i] = neighbors[i][pass]
                 results.append(String(alt))
-                if results.count >= maxCount { return results }
+                // pass 1 以降は append ごとに上限チェック（pass 0 は全位置を完走させる）
+                if pass > 0, results.count >= effectiveMax { break }
             }
+            if results.count >= effectiveMax { break }
         }
         return results
     }
