@@ -1,6 +1,35 @@
 import Foundation
 import KanaKanjiConverterModuleWithDefaultDictionary
 
+/// 修復候補の完了応答をマージする際に使う selectionIndex の再解決ロジック。
+/// 昇格などで候補配列の並びが変わっても、旧配列で選択されていたのと同じ論理候補を新配列上で探し直す。
+/// 同じ候補が見つからない場合は、サーバー側で補正済みの selectionIndex を使う。
+/// `Candidate`（サーバー側）・`ConverterCandidatePresentation`（クライアント側）どちらの
+/// 候補配列にも使えるよう、テキストの配列として受け取る。
+/// 追加候補（ひらがな・カタカナ変換など）と通常候補で同じテキストになり得るため、
+/// 単純な `firstIndex` ではなく、旧配列での出現順（何番目の同一テキストか）を保持して
+/// 新配列でも同じ occurrence を探すことで、別候補への誤マッチを防ぐ。
+public func resolveRepairSelectionIndex(
+    oldCandidateTexts: [String],
+    oldSelectionIndex: Int?,
+    newCandidateTexts: [String],
+    serverSelectionIndex: Int?
+) -> Int? {
+    guard let oldSelectionIndex, oldSelectionIndex >= 0, oldSelectionIndex < oldCandidateTexts.count else {
+        return serverSelectionIndex
+    }
+    let selectedText = oldCandidateTexts[oldSelectionIndex]
+    let occurrence = oldCandidateTexts[...oldSelectionIndex].filter { $0 == selectedText }.count - 1
+    var seen = 0
+    for (index, text) in newCandidateTexts.enumerated() where text == selectedText {
+        if seen == occurrence {
+            return index
+        }
+        seen += 1
+    }
+    return serverSelectionIndex
+}
+
 public final class SegmentsManager {
     public init(
         kanaKanjiConverter: KanaKanjiConverter,
@@ -427,15 +456,15 @@ public final class SegmentsManager {
             : rawCandidates
     }
 
-    private var rawCandidatesList: [Candidate]? {
+    /// 修復候補を混ぜる前の通常変換候補（`updateRepairCandidates` からも selectionIndex 補正のために参照する）
+    private var preRepairCandidates: [Candidate]? {
         guard let rawCandidates else {
             return nil
         }
-        let base: [Candidate]
         if !self.didExperienceSegmentEdition {
             if rawCandidates.firstClauseResults.contains(where: { self.composingText.isWholeComposingText(composingCount: $0.composingCount) }) {
                 // firstClauseCandidateがmainResultsと同じサイズの場合は、何もしない方が良い
-                base = rawCandidates.mainResults
+                return rawCandidates.mainResults
             } else {
                 // 変換範囲がエディットされていない場合
                 // 入力文字数の2倍を超える読みの学習候補は予測として不適切なため除外する
@@ -444,16 +473,35 @@ public final class SegmentsManager {
                     candidate.data.map(\.ruby).joined().count <= inputLen * 2
                 }
                 let seenAsFirstClauseResults = filteredFirstClause.mapSet(transform: \.text)
-                base = filteredFirstClause + rawCandidates.mainResults.filter {
+                return filteredFirstClause + rawCandidates.mainResults.filter {
                     !seenAsFirstClauseResults.contains($0.text)
                 }
             }
         } else {
-            base = rawCandidates.mainResults
+            return rawCandidates.mainResults
         }
-        guard !self.romajiRepairCandidates.isEmpty else { return base }
+    }
+
+    /// `repairCandidates` のうち base と重複せず新規に混ぜられる候補と、先頭に昇格すべきかどうかを判定する
+    private func repairCandidatePromotion(base: [Candidate], repairCandidates: [Candidate]) -> (fresh: [Candidate], shouldPromote: Bool) {
+        guard !repairCandidates.isEmpty else { return ([], false) }
         let seenTexts = base.mapSet(transform: \.text)
-        return base + self.romajiRepairCandidates.filter { !seenTexts.contains($0.text) }
+        let fresh = repairCandidates.filter { !seenTexts.contains($0.text) }
+        guard !fresh.isEmpty else { return ([], false) }
+        // 元の変換候補が辞書ヒットなし（かな読み直返し）の場合のみ、修復候補を先頭に昇格する
+        let baseLooksPoor = base.first.map {
+            KanaFuzzyRepair.isFallback($0, convertTarget: self.composingText.convertTarget)
+        } ?? true
+        return (fresh, baseLooksPoor)
+    }
+
+    private var rawCandidatesList: [Candidate]? {
+        guard let base = self.preRepairCandidates else {
+            return nil
+        }
+        let (fresh, shouldPromote) = self.repairCandidatePromotion(base: base, repairCandidates: self.romajiRepairCandidates)
+        guard !fresh.isEmpty else { return base }
+        return shouldPromote ? fresh + base : base + fresh
     }
 
     private var candidateOffsetByAdditionalCandidates: Int {
@@ -681,7 +729,19 @@ public final class SegmentsManager {
                 ))
             }
         }
+        // 修復候補が先頭に昇格すると候補全体のインデックスがずれるため、選択中の候補が変わらないよう補正する。
+        // additional candidates が候補配列の先頭に挟まっている場合も含めて、表示中の完全な配列
+        // （`self.candidates`）上でテキスト一致により選択中の論理候補を探し直す。
+        let oldSelectionIndex = self.selectionIndex
+        let oldCandidateTexts = self.candidates?.map(\.text) ?? []
         self.romajiRepairCandidates = repairCandidates
+        let newCandidateTexts = self.candidates?.map(\.text) ?? []
+        self.selectionIndex = resolveRepairSelectionIndex(
+            oldCandidateTexts: oldCandidateTexts,
+            oldSelectionIndex: oldSelectionIndex,
+            newCandidateTexts: newCandidateTexts,
+            serverSelectionIndex: oldSelectionIndex
+        )
     }
 
     /// - note: 画面更新との整合性を保つため、この関数の実行前に左文脈を取得し、これを引数として与える

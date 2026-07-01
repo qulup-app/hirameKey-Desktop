@@ -954,12 +954,19 @@ extension azooKeyMacInputController {
                     guard response.snapshot.convertTarget == capturedConvertTarget,
                           self.currentConverterView?.convertTarget == capturedConvertTarget else { return }
                     // 修復候補をマージする際、候補選択状態（selectionIndex）の巻き戻しを防ぐ。
-                    // リクエスト発行後にユーザーが候補を選択移動していた場合は現在の index を維持する。
+                    // 昇格で候補配列の位置がずれても同じ論理候補を指し続けられるよう、
+                    // 照合ロジックは Core 側の resolveRepairSelectionIndex に委譲する。
                     var snapshot = response.snapshot
                     if let currentWindow = self.currentConverterView?.candidateWindow,
-                       case let .selecting(newCandidates, _) = snapshot.candidateWindow,
-                       case let .selecting(_, currentIdx) = currentWindow {
-                        snapshot.candidateWindow = .selecting(newCandidates, selectionIndex: currentIdx)
+                       case let .selecting(newCandidates, serverIdx) = snapshot.candidateWindow,
+                       case let .selecting(oldCandidates, currentIdx) = currentWindow {
+                        let resolvedIdx = resolveRepairSelectionIndex(
+                            oldCandidateTexts: oldCandidates.map(\.text),
+                            oldSelectionIndex: currentIdx,
+                            newCandidateTexts: newCandidates.map(\.text),
+                            serverSelectionIndex: serverIdx
+                        )
+                        snapshot.candidateWindow = .selecting(newCandidates, selectionIndex: resolvedIdx)
                     }
                     self.currentConverterView = snapshot
                     self.refreshCandidateWindow()
