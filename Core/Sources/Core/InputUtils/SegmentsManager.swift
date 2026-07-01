@@ -90,6 +90,8 @@ public final class SegmentsManager {
     private var backspaceAdjustedPredictionCandidate: PredictionCandidate?
     private var backspaceTypoCorrectionLock: BackspaceTypoCorrectionLock?
     private var romajiRepairCandidates: [Candidate] = []
+    /// `romajiRepairCandidates` のうち LM ベース修復（Phase 2）が始まるインデックス。それより前は隣接キー修復（Phase 1）。
+    private var lmRepairCandidateStartIndex: Int = 0
 
     public struct PredictionCandidate: Sendable, Equatable {
         public var displayText: String
@@ -499,9 +501,16 @@ public final class SegmentsManager {
         guard let base = self.preRepairCandidates else {
             return nil
         }
-        let (fresh, shouldPromote) = self.repairCandidatePromotion(base: base, repairCandidates: self.romajiRepairCandidates)
-        guard !fresh.isEmpty else { return base }
-        return shouldPromote ? fresh + base : base + fresh
+        let splitIndex = min(self.lmRepairCandidateStartIndex, self.romajiRepairCandidates.count)
+        let adjacentKeyCandidates = Array(self.romajiRepairCandidates[..<splitIndex])
+        let lmCandidates = Array(self.romajiRepairCandidates[splitIndex...])
+        let (adjacentKeyFresh, shouldPromoteAdjacentKey) = self.repairCandidatePromotion(base: base, repairCandidates: adjacentKeyCandidates)
+        // LM ベースの修復候補（Phase 2）は n-gram LM が既に確信を持って選んだ訂正であり、
+        // 隣接キー修復（Phase 1、投機的な仮説）と異なり base の良し悪しに関わらず常に先頭に昇格する
+        let (lmFresh, _) = self.repairCandidatePromotion(base: base, repairCandidates: lmCandidates)
+        guard !adjacentKeyFresh.isEmpty || !lmFresh.isEmpty else { return base }
+        let rest = shouldPromoteAdjacentKey ? adjacentKeyFresh + base : base + adjacentKeyFresh
+        return lmFresh + rest
     }
 
     private var candidateOffsetByAdditionalCandidates: Int {
@@ -700,6 +709,7 @@ public final class SegmentsManager {
             }
         }
         // Phase 2: N-gram LM ベースの修復（weights がある場合のみ）
+        let lmStartIndex = repairCandidates.count
         let typoReadings = self.requestTypoCorrectionCandidates(
             composingText: self.composingText,
             inputStyle: self.lastInputStyle
@@ -736,6 +746,7 @@ public final class SegmentsManager {
         let oldSelectionIndex = self.selectionIndex
         let oldCandidateTexts = self.candidates?.map(\.text) ?? []
         self.romajiRepairCandidates = repairCandidates
+        self.lmRepairCandidateStartIndex = lmStartIndex
         let newCandidateTexts = self.candidates?.map(\.text) ?? []
         self.selectionIndex = resolveRepairSelectionIndex(
             oldCandidateTexts: oldCandidateTexts,
@@ -1107,7 +1118,11 @@ public final class SegmentsManager {
         return .init(displayText: displayText, appendText: appendText, deleteCount: deleteCount)
     }
 
-    private func requestTypoCorrectionCandidates(composingText targetComposingText: ComposingText, inputStyle: InputStyle) -> [String] {
+    /// - Parameter requireChannelEdit: true の場合、LM が入力を無編集（channelCost == 0）で
+    ///   通過した候補を除外する。`targetComposingText` が生の入力（訂正前）の場合は true を指定する。
+    ///   `targetComposingText` が既に KanaFuzzyRepair の隣接キー仮説で置換済みの場合、その時点で
+    ///   訂正は完了しているため、LM 側の channelCost はもはや誤字判定の根拠にならず false を指定する。
+    private func requestTypoCorrectionCandidates(composingText targetComposingText: ComposingText, inputStyle: InputStyle, requireChannelEdit: Bool = true) -> [String] {
         guard Config.DebugTypoCorrection().value && self.hasDebugTypoCorrectionWeights() else {
             return []
         }
@@ -1135,8 +1150,18 @@ public final class SegmentsManager {
             )
         )
 
+        return Self.filterGenuineTypoCorrectionReadings(typoCandidates, requireChannelEdit: requireChannelEdit)
+    }
+
+    /// LM が返した候補を誤字訂正の読みとして採用するかを絞り込む。
+    /// `requireChannelEdit` が true の場合、channelCost == 0（入力を無編集で通過した仮説、
+    /// 正しく入力された語に対する単なる別解釈であって誤字訂正ではない）候補を除外する。
+    static func filterGenuineTypoCorrectionReadings(_ typoCandidates: [ZenzaiTypoCandidate], requireChannelEdit: Bool = true) -> [String] {
         var seen: Set<String> = []
         return typoCandidates.compactMap { candidate in
+            guard !requireChannelEdit || candidate.channelCost > 0 else {
+                return nil
+            }
             let text = candidate.convertedText.toHiragana()
             guard !text.isEmpty else {
                 return nil
@@ -1201,7 +1226,9 @@ public final class SegmentsManager {
         var altComposingText = ComposingText()
         altComposingText.insertAtCursorPosition(text, inputStyle: style)
         guard altComposingText.convertTarget != currentConvertTarget else { return nil }
-        let altCandidates = self.requestTypoCorrectionCandidates(composingText: altComposingText, inputStyle: style)
+        // altComposingText は既に KanaFuzzyRepair の隣接キー仮説で訂正済みのため、
+        // LM 側で無編集（channelCost == 0）であっても正当な訂正結果として受け入れる
+        let altCandidates = self.requestTypoCorrectionCandidates(composingText: altComposingText, inputStyle: style, requireChannelEdit: false)
         return self.firstPresentableTypoLock(candidates: altCandidates, previousComposingDisplayText: previousComposingDisplayText)
     }
 
